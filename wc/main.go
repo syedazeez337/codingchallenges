@@ -3,9 +3,93 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"strings"
 )
 
+type WcResult struct {
+	Lines    int
+	Words    int
+	Bytes    int
+	Chars    int
+	Filename string
+}
+
+func getWCResult(filename string) (WcResult, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return WcResult{}, err
+	}
+	defer file.Close()
+
+	// Read entire file once
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return WcResult{}, err
+	}
+
+	text := string(data)
+	lines := 0
+	words := 0
+
+	scanner := bufio.NewScanner(strings.NewReader(text))
+	for scanner.Scan() {
+		lines++
+	}
+	wordScanner := bufio.NewScanner(strings.NewReader(text))
+	wordScanner.Split(bufio.ScanWords)
+	for wordScanner.Scan() {
+		words++
+	}
+
+	return WcResult{
+		Lines:    lines,
+		Words:    words,
+		Bytes:    len(data),
+		Chars:    len([]rune(text)),
+		Filename: filename,
+	}, nil
+}
+
+func main() {
+	if len(os.Args) < 2 || len(os.Args) > 3 {
+		fmt.Println("Usage: ccwc [-c|-l|-w|-m] <filename")
+		return
+	}
+
+	var option, filename string
+	if len(os.Args) == 2 {
+		option = "default"
+		filename = os.Args[1]
+	} else {
+		option = os.Args[1]
+		filename = os.Args[2]
+	}
+
+	result, err := getWCResult(filename)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	switch option {
+	case "-c":
+		fmt.Printf("%8d %s\n", result.Bytes, result.Filename)
+	case "-l":
+		fmt.Printf("%8d %s\n", result.Lines, result.Filename)
+	case "-w":
+		fmt.Printf("%8d %s\n", result.Words, result.Filename)
+	case "-m":
+		fmt.Printf("%8d %s\n", result.Words, result.Filename)
+	case "default":
+		fmt.Printf("%8d %8d %8d %s\n", result.Lines, result.Words, result.Bytes, result.Filename)
+	default:
+		fmt.Println("Unknown option:", option)
+	}
+}
+
+/*
 func main() {
 	if len(os.Args) != 3 {
 		fmt.Println("Usage: ccwc <-c|-l> <filename>")
@@ -22,7 +106,7 @@ func main() {
 			fmt.Println("Error:", err)
 			return
 		}
-		fmt.Printf("%8d %s\n", count, filename)
+		fmt.Printf("%8T %s\n", count, filename)
 
 	case "-l":
 		count, err := countLines(filename)
@@ -40,8 +124,17 @@ func main() {
 		}
 		fmt.Printf("%8d %s\n", count, filename)
 
+	case "-m":
+		count, err := countCharacters(filename)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+		fmt.Printf("%8d %s\n", count, filename)
+
 	default:
-		fmt.Println("Unknown Option:", option)
+		// fmt.Println("Unknown Option:", option)
+		fmt.Printf("%8d %8d %8d %s\n", )
 	}
 
 	/*
@@ -58,7 +151,7 @@ func main() {
 	}
 
 	fmt.Printf("%8d %s\n", count, filename)
-	*/
+
 }
 
 func countBytes(filename string) (int, error) {
@@ -118,3 +211,15 @@ func countWords(filename string) (int, error) {
 
 	return count, nil
 }
+
+func countCharacters(filename string) (int, error) {
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		return 0, err
+	}
+
+	runes := []rune(string(data))
+	return len(runes), nil
+}
+
+*/
